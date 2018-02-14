@@ -1,0 +1,10 @@
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/common/ExamplePubsubTopicOptions.java
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/MinimalWordCount.java
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/common/ExampleBigQueryTableOptions.java
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/DebuggingWordCount.java
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/WindowedWordCount.java
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/WordCount.java
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/common/ExampleUtils.java
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/common/WriteOneFilePerWindow.java
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/common/ExamplePubsubTopicAndSubscriptionOptions.java
+/Users/cvicensa/Projects/gcloud/autosuggest/autosuggest-beam/src/main/java/org/example/autosuggest/common/ExampleOptions.java
