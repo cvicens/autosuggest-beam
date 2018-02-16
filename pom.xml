@@ -42,6 +42,8 @@
     <pubsub.version>v1-rev10-1.22.0</pubsub.version>
     <slf4j.version>1.7.25</slf4j.version>
     <surefire-plugin.version>2.20</surefire-plugin.version>
+    <jedis.version>2.9.0</jedis.version>
+    <beam-sdks-java-io-redis.version>2.2.0</beam-sdks-java-io-redis.version>
   </properties>
 
   <repositories>
@@ -98,7 +100,7 @@
 
       <!--
         Configures `mvn package` to produce a bundled jar ("fat jar") for runners
-        that require this for job submission to a cluster.
+        that require this for job submission to a cluster. 
       -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -257,5 +259,20 @@
       <artifactId>jackson-databind</artifactId>
       <version>${jackson.version}</version>
     </dependency>
+
+    <!-- https://mvnrepository.com/artifact/redis.clients/jedis 
+    <dependency>
+        <groupId>redis.clients</groupId>
+        <artifactId>jedis</artifactId>
+        <version>${jedis.version}</version>
+    </dependency>-->
+
+    <!-- https://mvnrepository.com/artifact/org.apache.beam/beam-sdks-java-io-redis -->
+    <dependency>
+        <groupId>org.apache.beam</groupId>
+        <artifactId>beam-sdks-java-io-redis</artifactId>
+        <version>${beam-sdks-java-io-redis.version}</version>
+    </dependency>
+
   </dependencies>
 </project>

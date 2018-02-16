@@ -18,22 +18,11 @@
 package org.example.autosuggest;
 
 import org.example.autosuggest.common.ExampleUtils;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.KvCoder;
-import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Distribution;
@@ -44,7 +33,6 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation.Required;
 import org.apache.beam.sdk.transforms.Count;
-import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -53,10 +41,50 @@ import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 
-
-public class RelevantWords {
-  private static JedisPool jedisPool = null;
-  //private static Jedis jedis = null;
+/**
+ * An example that counts words in Shakespeare and includes Beam best practices.
+ *
+ * <p>This class, {@link WordCount}, is the second in a series of four successively more detailed
+ * 'word count' examples. You may first want to take a look at {@link MinimalWordCount}.
+ * After you've looked at this example, then see the {@link DebuggingWordCount}
+ * pipeline, for introduction of additional concepts.
+ *
+ * <p>For a detailed walkthrough of this example, see
+ *   <a href="https://beam.apache.org/get-started/wordcount-example/">
+ *   https://beam.apache.org/get-started/wordcount-example/
+ *   </a>
+ *
+ * <p>Basic concepts, also in the MinimalWordCount example:
+ * Reading text files; counting a PCollection; writing to text files
+ *
+ * <p>New Concepts:
+ * <pre>
+ *   1. Executing a Pipeline both locally and using the selected runner
+ *   2. Using ParDo with static DoFns defined out-of-line
+ *   3. Building a composite transform
+ *   4. Defining your own pipeline options
+ * </pre>
+ *
+ * <p>Concept #1: you can execute this pipeline either locally or using by selecting another runner.
+ * These are now command-line options and not hard-coded as they were in the MinimalWordCount
+ * example.
+ *
+ * <p>To change the runner, specify:
+ * <pre>{@code
+ *   --runner=YOUR_SELECTED_RUNNER
+ * }
+ * </pre>
+ *
+ * <p>To execute this pipeline, specify a local output file (if using the
+ * {@code DirectRunner}) or output prefix on a supported distributed file system.
+ * <pre>{@code
+ *   --output=[YOUR_LOCAL_FILE | YOUR_OUTPUT_PREFIX]
+ * }</pre>
+ *
+ * <p>The input file defaults to a public data set containing the text of of King Lear,
+ * by William Shakespeare. You can override it and choose your own input with {@code --inputFile}.
+ */
+public class InsertProductsInCache {
 
   /**
    * Concept #2: You can make your pipeline assembly code less verbose by defining your DoFns
@@ -90,7 +118,8 @@ public class RelevantWords {
   static class ExtractProductsFn extends DoFn<String, Product> {
     private final ObjectMapper mapper = new ObjectMapper();
     private final Counter emptyLines = Metrics.counter(ExtractProductsFn.class, "emptyLines");
-    private final Distribution lineLenDist = Metrics.distribution(ExtractProductsFn.class, "lineLenDistro");
+    private final Distribution lineLenDist = Metrics.distribution(
+      ExtractProductsFn.class, "lineLenDistro");
 
     @ProcessElement
     public void processElement(ProcessContext c) {
@@ -105,65 +134,7 @@ public class RelevantWords {
         Product product = mapper.readValue(cleanedLine, Product.class);
         c.output(product);
       } catch (Throwable e) {
-        System.err.println(cleanedLine + "\n" + e.getMessage());
-      }
-    }
-  }
-
-  static class InsertProductInCacheFn extends DoFn<Product, Product> {
-    private final ObjectMapper mapper = new ObjectMapper();
-    private final Distribution productNameLenDist = Metrics.distribution(InsertProductInCacheFn.class, "productNameLenDistro");
-    private final Counter newInserts = Metrics.counter(InsertProductInCacheFn.class, "newInserts");
-
-    @ProcessElement
-    public void processElement(ProcessContext c) {
-      productNameLenDist.update(c.element().getName().length());
-      
-      Long newInsert = 0L;
-      try (Jedis jedis = RelevantWords.jedisPool.getResource()) {
-        newInsert = jedis.hset("SKUs", "sku-" + c.element().getSku(), mapper.writeValueAsString(c.element()));
-        newInserts.inc(newInsert);
-      } catch (Throwable e) {
-        System.err.println("Error inserting in cache SKU: " + c.element().getSku() + "\n" + e.getMessage());
-      }
-
-      c.output(c.element());
-    }
-  }
-
-  static class InsertSearchPrefixesInCacheFn extends DoFn<KV<String,String>, KV<String,String>> {
-    private final ObjectMapper mapper = new ObjectMapper();
-    private final Counter newInserts = Metrics.counter(InsertProductInCacheFn.class, "newInserts");
-    @ProcessElement
-    public void processElement(ProcessContext c) {
-
-      Long newInsert = 0L;
-      try (Jedis jedis = RelevantWords.jedisPool.getResource()) {
-        newInsert = jedis.zadd(c.element().getValue(), 0, "sku-" + c.element().getKey());
-        newInserts.inc(newInsert);
-      } catch (Throwable e) {
-        System.err.println("Error inserting prefix cache SKU: " + c.element().getValue() + "<=" + c.element().getKey() + "\n" + e.getMessage());
-      }
-
-      c.output(c.element());
-    }
-  }
-
-  static class ExtractSearchPrefixesFn extends DoFn<Product, KV<String,String>> {
-    private final ObjectMapper mapper = new ObjectMapper();
-
-    private final Distribution productPrefixesDistro = Metrics.distribution(ExtractSearchPrefixesFn.class, "productPrefixesDistro");
-    private final Counter skippedProducts = Metrics.counter(ExtractSearchPrefixesFn.class, "skippedProducts");
-
-    @ProcessElement
-    public void processElement(ProcessContext c) {
-      String productName = c.element().getName();
-      productPrefixesDistro.update(productName.length());
-
-      //Map<String, String> kv = new HashMap<String, String>();
-      List<String> prefixes = new ArrayList<String>();
-      for(int i = 0; i < productName.length(); i++) {
-        c.output(KV.of(c.element().getSku(), productName.substring(0, i).toLowerCase()));
+        System.out.println(cleanedLine + "\n" + e.getMessage());
       }
     }
   }
@@ -177,7 +148,7 @@ public class RelevantWords {
   }
 
   /** A SimpleFunction that converts a Product into a printable string. */
-  public static class FormatProductsAsTextFn extends SimpleFunction<Product, String> {
+  public static class FormaProducttAsTextFn extends SimpleFunction<Product, String> {
     @Override
     public String apply(Product input) {
       return input.getSku() + ": " + input.getName();
@@ -214,7 +185,8 @@ public class RelevantWords {
    * Products
    *
    */
-  public static class ExtractProducts extends PTransform<PCollection<String>, PCollection<Product>> {
+  public static class ExtractProducts extends PTransform<PCollection<String>,
+      PCollection<Product>> {
     @Override
     public PCollection<Product> expand(PCollection<String> lines) {
 
@@ -223,40 +195,6 @@ public class RelevantWords {
           ParDo.of(new ExtractProductsFn()));
 
       return products;
-    }
-  }
-
-  public static class InsertProductsInCache extends PTransform<PCollection<Product>, PCollection<Product>> {
-    @Override
-    public PCollection<Product> expand(PCollection<Product> products) {
-
-      // Insert products in cache
-      PCollection<Product> insertedProducts = products.apply(ParDo.of(new InsertProductInCacheFn()));
-
-      return insertedProducts;
-    }
-  }
-
-  public static class InsertSearchPrefixesInCache extends PTransform< PCollection<KV<String,String>>, 
-                                                                      PCollection<KV<String,String>> > {
-    @Override
-    public PCollection<KV<String,String>> expand(PCollection<KV<String,String>> prefixes) {
-
-      // Insert products in cache
-      PCollection<KV<String,String>> insertedPrefixes = prefixes.apply(ParDo.of(new InsertSearchPrefixesInCacheFn()));
-
-      return insertedPrefixes;
-    }
-  }
-
-  public static class ExtractSearchPrefixes extends PTransform<PCollection<Product>, PCollection<KV<String,String>>> {
-    @Override
-    public PCollection<KV<String,String>> expand(PCollection<Product> products) {
-
-      // Insert products in cache
-      PCollection<KV<String,String>> searchPrefixes = products.apply(ParDo.of(new ExtractSearchPrefixesFn()));
-
-      return searchPrefixes;
     }
   }
 
@@ -269,7 +207,7 @@ public class RelevantWords {
    *
    * <p>Inherits standard configuration options.
    */
-  public interface RelevantWordsOptions extends PipelineOptions {
+  public interface WordCountOptions extends PipelineOptions {
 
     /**
      * By default, this example reads from a public dataset containing the text of
@@ -287,39 +225,19 @@ public class RelevantWords {
     @Required
     String getOutput();
     void setOutput(String value);
-
-    /**
-     * Redis cache host
-     */
-    @Description("Redis Host")
-    @Default.String("localhost")
-    String getRedisHost();
-    void setRedisHost(String value);
-
-    /**
-     * Redis cache port
-     */
-    @Description("Redis Port")
-    @Default.String("6379")
-    Integer getRedisPort();
-    void setRedisPort(Integer value);
   }
 
   public static void main(String[] args) {
-    RelevantWordsOptions options = PipelineOptionsFactory.fromArgs(args).withValidation()
-      .as(RelevantWordsOptions.class);
-    RelevantWords.jedisPool = new JedisPool(new JedisPoolConfig(), options.getRedisHost(), options.getRedisPort());
-    //new Jedis(options.getRedisHost(), options.getRedisPort());
-
+    WordCountOptions options = PipelineOptionsFactory.fromArgs(args).withValidation()
+      .as(WordCountOptions.class);
     Pipeline p = Pipeline.create(options);
 
+    // Concepts #2 and #3: Our pipeline applies the composite CountWords transform, and passes the
+    // static FormatAsTextFn() to the ParDo transform.
     p.apply("ReadLines", TextIO.read().from(options.getInputFile()))
      .apply(new ExtractProducts())
-     .apply(new InsertProductsInCache())
-     .apply(new ExtractSearchPrefixes())
-     .apply(new InsertSearchPrefixesInCache());
-     //.apply(MapElements.via(new FormatProductsAsTextFn()))
-     //.apply("WriteCounts", TextIO.write().to(options.getOutput()));
+     .apply(MapElements.via(new FormaProducttAsTextFn()))
+     .apply("WriteCounts", TextIO.write().to(options.getOutput()));
 
     p.run().waitUntilFinish();
   }
