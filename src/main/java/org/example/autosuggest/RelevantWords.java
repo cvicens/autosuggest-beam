@@ -300,7 +300,7 @@ public class RelevantWords {
      * Redis cache port
      */
     @Description("Redis Port")
-    @Default.String("6379")
+    @Default.Integer(6379)
     Integer getRedisPort();
     void setRedisPort(Integer value);
   }
