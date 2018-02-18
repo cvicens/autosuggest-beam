@@ -116,12 +116,14 @@ public class RelevantWords {
     public InsertProductInCacheFn (String redisHost, Integer redisPort) {
       this.redisHost = redisHost;
       this.redisPort = redisPort;
+      LOG.trace("InsertProductInCacheFn => redisHost: " + redisHost + "redisPort: " + redisPort);
     }
 
     @ProcessElement
     public void processElement(ProcessContext c) {
       productNameLenDist.update(c.element().getName().length());
-      
+      LOG.trace("InsertProductInCacheFn.processElement => redisHost: " + redisHost + "redisPort: " + redisPort);
+
       Long newInsert = 0L;
       try (Jedis jedis = RedisPoolSingleton.getInstance(redisHost, redisPort).getJedisPool().getResource()) {
         newInsert = jedis.hset("SKUs", "sku-" + c.element().getSku(), mapper.writeValueAsString(c.element()));
@@ -137,11 +139,20 @@ public class RelevantWords {
   static class InsertSearchPrefixesInCacheFn extends DoFn<KV<String,String>, KV<String,String>> {
     private final ObjectMapper mapper = new ObjectMapper();
     private final Counter newInserts = Metrics.counter(InsertProductInCacheFn.class, "newInserts");
+
+    private String redisHost = null;
+    private Integer redisPort = null;
+
+    public InsertSearchPrefixesInCacheFn (String redisHost, Integer redisPort) {
+      this.redisHost = redisHost;
+      this.redisPort = redisPort;
+    }
+
     @ProcessElement
     public void processElement(ProcessContext c) {
 
       Long newInsert = 0L;
-      try (Jedis jedis = RelevantWords.jedisPool.getResource()) {
+      try (Jedis jedis = RedisPoolSingleton.getInstance(redisHost, redisPort).getJedisPool().getResource()) {
         newInsert = jedis.zadd(c.element().getValue(), 0, "sku-" + c.element().getKey());
         newInserts.inc(newInsert);
       } catch (Throwable e) {
@@ -269,11 +280,19 @@ public class RelevantWords {
 
   public static class InsertSearchPrefixesInCache extends PTransform< PCollection<KV<String,String>>, 
                                                                       PCollection<KV<String,String>> > {
+    private String redisHost = null;
+    private Integer redisPort = null;
+
+    public InsertSearchPrefixesInCache (String redisHost, Integer redisPort) {
+      this.redisHost = redisHost;
+      this.redisPort = redisPort;
+    }
+
     @Override
     public PCollection<KV<String,String>> expand(PCollection<KV<String,String>> prefixes) {
 
       // Insert products in cache
-      PCollection<KV<String,String>> insertedPrefixes = prefixes.apply(ParDo.of(new InsertSearchPrefixesInCacheFn()));
+      PCollection<KV<String,String>> insertedPrefixes = prefixes.apply(ParDo.of(new InsertSearchPrefixesInCacheFn(redisHost, redisPort)));
 
       return insertedPrefixes;
     }
@@ -350,7 +369,7 @@ public class RelevantWords {
      //.apply(new PrepareRedisPool())
      .apply(new InsertProductsInCache(options.getRedisHost(), options.getRedisPort()))
      .apply(new ExtractSearchPrefixes())
-     .apply(new InsertSearchPrefixesInCache());
+     .apply(new InsertSearchPrefixesInCache(options.getRedisHost(), options.getRedisPort()));
      //.apply(MapElements.via(new FormatProductsAsTextFn()))
      //.apply("WriteCounts", TextIO.write().to(options.getOutput()));
 
