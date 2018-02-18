@@ -179,6 +179,15 @@ public class RelevantWords {
     }
   }
 
+  static class DoNothingFn extends DoFn<Product, Product> {
+    private static final Logger LOG = LoggerFactory.getLogger(DoNothingFn.class);
+
+    @ProcessElement
+    public void processElement(ProcessContext c) {
+      c.output(c.element());
+    }
+  }
+
   /**
    * A PTransform that converts a PCollection containing lines of text into a PCollection of
    * formatted word counts.
@@ -231,7 +240,7 @@ public class RelevantWords {
     @Override
     public PCollection<Product> expand(PCollection<Product> products) {
       LOG.info("PrepareRedisPool.expand");
-      return products;
+      return products = products.apply(ParDo.of(new DoNothingFn()));
     }
   }
 
