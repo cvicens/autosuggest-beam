@@ -305,7 +305,7 @@ public class RelevantWords {
     RelevantWordsOptions options = PipelineOptionsFactory.fromArgs(args).withValidation()
       .as(RelevantWordsOptions.class);
 
-    LOG.info("BEAM Redis: %s:%s", options.getRedisHost(), options.getRedisPort());
+    LOG.info("BEAM Redis: {}:{}", options.getRedisHost(), options.getRedisPort());
     RelevantWords.jedisPool = new JedisPool(new JedisPoolConfig(), options.getRedisHost(), options.getRedisPort());
     //new Jedis(options.getRedisHost(), options.getRedisPort());
 
