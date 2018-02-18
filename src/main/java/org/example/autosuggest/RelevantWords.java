@@ -124,14 +124,14 @@ public class RelevantWords {
       
       Long newInsert = 0L;
       try (Jedis jedis = RelevantWords.jedisPool.getResource()) {
+        LOG.info("jedis: " + jedis + " " + jedis.getClient());
         newInsert = jedis.hset("SKUs", "sku-" + c.element().getSku(), mapper.writeValueAsString(c.element()));
         newInserts.inc(newInsert);
         LOG.debug("Inserted: " + "sku-" + c.element().getSku());
+        c.output(c.element());
       } catch (Throwable e) {
-        LOG.error("Error: " + c.element().getSku() + " msg: " + e.getMessage());
+        LOG.error("Error: " + c.element().getSku(), c.element(), e);
       }
-
-      c.output(c.element());
     }
   }
 
