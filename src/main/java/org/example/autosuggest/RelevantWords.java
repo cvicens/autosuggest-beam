@@ -110,13 +110,20 @@ public class RelevantWords {
     private final Distribution productNameLenDist = Metrics.distribution(InsertProductInCacheFn.class, "productNameLenDistro");
     private final Counter newInserts = Metrics.counter(InsertProductInCacheFn.class, "newInserts");
 
+    private String redisHost = null;
+    private Integer redisPort = null;
+
+    public InsertProductInCacheFn (String redisHost, Integer redisPort) {
+      this.redisHost = redisHost;
+      this.redisPort = redisPort;
+    }
+
     @ProcessElement
     public void processElement(ProcessContext c) {
       productNameLenDist.update(c.element().getName().length());
       
       Long newInsert = 0L;
-      RelevantWordsOptions options = (RelevantWordsOptions)c.getPipelineOptions();
-      try (Jedis jedis = RedisPoolSingleton.getInstance(options.getRedisHost(), options.getRedisPort()).getJedisPool().getResource()) {
+      try (Jedis jedis = RedisPoolSingleton.getInstance(redisHost, redisPort).getJedisPool().getResource()) {
         newInsert = jedis.hset("SKUs", "sku-" + c.element().getSku(), mapper.writeValueAsString(c.element()));
         newInserts.inc(newInsert);
         LOG.debug("Inserted: " + "sku-" + c.element().getSku());
@@ -242,11 +249,19 @@ public class RelevantWords {
   }
 
   public static class InsertProductsInCache extends PTransform<PCollection<Product>, PCollection<Product>> {
+    private String redisHost = null;
+    private Integer redisPort = null;
+
+    public InsertProductsInCache (String redisHost, Integer redisPort) {
+      this.redisHost = redisHost;
+      this.redisPort = redisPort;
+    }
+
     @Override
     public PCollection<Product> expand(PCollection<Product> products) {
 
       // Insert products in cache
-      PCollection<Product> insertedProducts = products.apply(ParDo.of(new InsertProductInCacheFn()));
+      PCollection<Product> insertedProducts = products.apply(ParDo.of(new InsertProductInCacheFn(redisHost, redisPort)));
 
       return insertedProducts;
     }
@@ -332,8 +347,8 @@ public class RelevantWords {
 
     p.apply("ReadLines", TextIO.read().from(options.getInputFile()))
      .apply(new ExtractProducts())
-     .apply(new PrepareRedisPool())
-     .apply(new InsertProductsInCache())
+     //.apply(new PrepareRedisPool())
+     .apply(new InsertProductsInCache(options.getRedisHost(), options.getRedisPort()))
      .apply(new ExtractSearchPrefixes())
      .apply(new InsertSearchPrefixesInCache());
      //.apply(MapElements.via(new FormatProductsAsTextFn()))
