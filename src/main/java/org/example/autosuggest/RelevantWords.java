@@ -21,19 +21,11 @@ import org.example.autosuggest.common.ExampleUtils;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.KvCoder;
-import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Distribution;
@@ -44,9 +36,7 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation.Required;
 import org.apache.beam.sdk.transforms.Count;
-import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SimpleFunction;
@@ -57,6 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RelevantWords {
+  private static final Logger LOG = LoggerFactory.getLogger(RelevantWords.class);
+
   private static JedisPool jedisPool = null;
   //private static Jedis jedis = null;
 
@@ -312,6 +304,8 @@ public class RelevantWords {
   public static void main(String[] args) {
     RelevantWordsOptions options = PipelineOptionsFactory.fromArgs(args).withValidation()
       .as(RelevantWordsOptions.class);
+
+    LOG.info("BEAM Redis: %s:%s", options.getRedisHost(), options.getRedisPort());
     RelevantWords.jedisPool = new JedisPool(new JedisPoolConfig(), options.getRedisHost(), options.getRedisPort());
     //new Jedis(options.getRedisHost(), options.getRedisPort());
 
