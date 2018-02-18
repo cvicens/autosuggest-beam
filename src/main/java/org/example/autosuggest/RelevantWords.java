@@ -137,6 +137,7 @@ public class RelevantWords {
   }
 
   static class InsertSearchPrefixesInCacheFn extends DoFn<KV<String,String>, KV<String,String>> {
+    private static final Logger LOG = LoggerFactory.getLogger(InsertSearchPrefixesInCacheFn.class);
     private final ObjectMapper mapper = new ObjectMapper();
     private final Counter newInserts = Metrics.counter(InsertProductInCacheFn.class, "newInserts");
 
@@ -146,10 +147,12 @@ public class RelevantWords {
     public InsertSearchPrefixesInCacheFn (String redisHost, Integer redisPort) {
       this.redisHost = redisHost;
       this.redisPort = redisPort;
+      LOG.trace("InsertSearchPrefixesInCacheFn => redisHost: " + redisHost + "redisPort: " + redisPort);
     }
 
     @ProcessElement
     public void processElement(ProcessContext c) {
+      LOG.trace("InsertSearchPrefixesInCacheFn.processElement => redisHost: " + redisHost + "redisPort: " + redisPort);
 
       Long newInsert = 0L;
       try (Jedis jedis = RedisPoolSingleton.getInstance(redisHost, redisPort).getJedisPool().getResource()) {
