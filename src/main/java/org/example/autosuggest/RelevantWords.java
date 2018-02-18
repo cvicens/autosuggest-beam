@@ -221,12 +221,16 @@ public class RelevantWords {
     }
   }
   public static class PrepareRedisPool extends PTransform<PCollection<Product>, PCollection<Product>> {
+    private static final Logger LOG = LoggerFactory.getLogger(PrepareRedisPool.class);
     public PrepareRedisPool(String redisHost, Integer redisPort) {
+      LOG.info("About to create RelevantWords.jedisPool");
       RelevantWords.jedisPool = new JedisPool(new JedisPoolConfig(), redisHost, redisPort);
+      LOG.info("After creating RelevantWords.jedisPool " + RelevantWords.jedisPool);
     }
 
     @Override
     public PCollection<Product> expand(PCollection<Product> products) {
+      LOG.info("PrepareRedisPool.expand");
       return products;
     }
   }
@@ -329,7 +333,7 @@ public class RelevantWords {
      //.apply(MapElements.via(new FormatProductsAsTextFn()))
      //.apply("WriteCounts", TextIO.write().to(options.getOutput()));
 
-    //p.run().waitUntilFinish();
-    p.run();
+    p.run().waitUntilFinish();
+    //p.run();
   }
 }
