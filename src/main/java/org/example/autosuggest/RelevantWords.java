@@ -53,6 +53,8 @@ import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RelevantWords {
   private static JedisPool jedisPool = null;
@@ -111,6 +113,7 @@ public class RelevantWords {
   }
 
   static class InsertProductInCacheFn extends DoFn<Product, Product> {
+    private static final Logger LOG = LoggerFactory.getLogger(InsertProductInCacheFn.class);
     private final ObjectMapper mapper = new ObjectMapper();
     private final Distribution productNameLenDist = Metrics.distribution(InsertProductInCacheFn.class, "productNameLenDistro");
     private final Counter newInserts = Metrics.counter(InsertProductInCacheFn.class, "newInserts");
@@ -123,8 +126,9 @@ public class RelevantWords {
       try (Jedis jedis = RelevantWords.jedisPool.getResource()) {
         newInsert = jedis.hset("SKUs", "sku-" + c.element().getSku(), mapper.writeValueAsString(c.element()));
         newInserts.inc(newInsert);
+        LOG.debug("Inserted: " + "sku-" + c.element().getSku());
       } catch (Throwable e) {
-        System.err.println("Error inserting in cache SKU: " + c.element().getSku() + "\n" + e.getMessage());
+        LOG.error("Error: " + c.element().getSku() + " msg: " + e.getMessage());
       }
 
       c.output(c.element());
@@ -321,6 +325,7 @@ public class RelevantWords {
      //.apply(MapElements.via(new FormatProductsAsTextFn()))
      //.apply("WriteCounts", TextIO.write().to(options.getOutput()));
 
-    p.run().waitUntilFinish();
+    //p.run().waitUntilFinish();
+    p.run();
   }
 }
