@@ -116,7 +116,6 @@ public class RelevantWords {
       
       Long newInsert = 0L;
       try (Jedis jedis = RelevantWords.jedisPool.getResource()) {
-        LOG.info("jedis: " + jedis + " " + jedis.getClient());
         newInsert = jedis.hset("SKUs", "sku-" + c.element().getSku(), mapper.writeValueAsString(c.element()));
         newInserts.inc(newInsert);
         LOG.debug("Inserted: " + "sku-" + c.element().getSku());
@@ -221,6 +220,16 @@ public class RelevantWords {
       return products;
     }
   }
+  public static class PrepareRedisPool extends PTransform<PCollection<Product>, PCollection<Product>> {
+    public PrepareRedisPool(String redisHost, Integer redisPort) {
+      RelevantWords.jedisPool = new JedisPool(new JedisPoolConfig(), redisHost, redisPort);
+    }
+
+    @Override
+    public PCollection<Product> expand(PCollection<Product> products) {
+      return products;
+    }
+  }
 
   public static class InsertProductsInCache extends PTransform<PCollection<Product>, PCollection<Product>> {
     @Override
@@ -306,13 +315,14 @@ public class RelevantWords {
       .as(RelevantWordsOptions.class);
 
     LOG.info("BEAM Redis: {}:{}", options.getRedisHost(), options.getRedisPort());
-    RelevantWords.jedisPool = new JedisPool(new JedisPoolConfig(), options.getRedisHost(), options.getRedisPort());
+    //RelevantWords.jedisPool = new JedisPool(new JedisPoolConfig(), options.getRedisHost(), options.getRedisPort());
     //new Jedis(options.getRedisHost(), options.getRedisPort());
 
     Pipeline p = Pipeline.create(options);
 
     p.apply("ReadLines", TextIO.read().from(options.getInputFile()))
      .apply(new ExtractProducts())
+     .apply(new PrepareRedisPool(options.getRedisHost(), options.getRedisPort()))
      .apply(new InsertProductsInCache())
      .apply(new ExtractSearchPrefixes())
      .apply(new InsertSearchPrefixesInCache());
