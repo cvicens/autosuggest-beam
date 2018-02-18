@@ -115,7 +115,8 @@ public class RelevantWords {
       productNameLenDist.update(c.element().getName().length());
       
       Long newInsert = 0L;
-      try (Jedis jedis = RelevantWords.jedisPool.getResource()) {
+      RelevantWordsOptions options = (RelevantWordsOptions)c.getPipelineOptions();
+      try (Jedis jedis = RedisPoolSingleton.getInstance(options.getRedisHost(), options.getRedisPort()).getJedisPool().getResource()) {
         newInsert = jedis.hset("SKUs", "sku-" + c.element().getSku(), mapper.writeValueAsString(c.element()));
         newInserts.inc(newInsert);
         LOG.debug("Inserted: " + "sku-" + c.element().getSku());
@@ -231,15 +232,11 @@ public class RelevantWords {
   }
   public static class PrepareRedisPool extends PTransform<PCollection<Product>, PCollection<Product>> {
     private static final Logger LOG = LoggerFactory.getLogger(PrepareRedisPool.class);
-    public PrepareRedisPool(String redisHost, Integer redisPort) {
-      LOG.info("About to create RelevantWords.jedisPool");
-      RelevantWords.jedisPool = new JedisPool(new JedisPoolConfig(), redisHost, redisPort);
-      LOG.info("After creating RelevantWords.jedisPool " + RelevantWords.jedisPool);
-    }
 
     @Override
     public PCollection<Product> expand(PCollection<Product> products) {
       LOG.info("PrepareRedisPool.expand");
+
       return products = products.apply(ParDo.of(new DoNothingFn()));
     }
   }
@@ -335,7 +332,7 @@ public class RelevantWords {
 
     p.apply("ReadLines", TextIO.read().from(options.getInputFile()))
      .apply(new ExtractProducts())
-     .apply(new PrepareRedisPool(options.getRedisHost(), options.getRedisPort()))
+     .apply(new PrepareRedisPool())
      .apply(new InsertProductsInCache())
      .apply(new ExtractSearchPrefixes())
      .apply(new InsertSearchPrefixesInCache());
