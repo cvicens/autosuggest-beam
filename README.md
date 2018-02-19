@@ -9,7 +9,7 @@ export GCP_REGION=europe-west1
 export GCP_NETWORK=autosuggest-network
 export GCP_SUBNETWORK=autosuggest-subnetwork-europe-west1-d
 export BUCKET_NAME=autosuggest-bucket
-export BEAM_PROJECT=autosuggest-beam
+export BEAM_PROJECT=autosuggest-beam-eu
 export BEAM_PROJECT_GRP_ID=org.example
 export BEAM_PROJECT_PKG=org.example.autosuggest
 export BEAM_MAIN_CLASS=${BEAM_PROJECT_PKG}.RelevantWords
@@ -84,14 +84,14 @@ export GCP_REGION=europe-west1
 export GCP_NETWORK=autosuggest-network
 export GCP_SUBNETWORK=autosuggest-subnetwork-europe-west1-d
 export BUCKET_NAME=autosuggest-bucket
-export BEAM_PROJECT=autosuggest-beam
+export BEAM_PROJECT=autosuggest-beam-streaming-eu
 export BEAM_PROJECT_GRP_ID=org.example
 export BEAM_PROJECT_PKG=org.example.autosuggest
 export BEAM_MAIN_CLASS=${BEAM_PROJECT_PKG}.RelevantWordsStreaming
 export REDIS_HOST=35.190.207.120
 export REDIS_PORT=6379
-export TOPIC=products
-export SUBSCRIPTION=dataflow-pipeline-products
+export TOPIC=projects/autosuggest-194816/topics/products
+export SUBSCRIPTION=projects/autosuggest-194816/subscriptions/dataflow-pipeline-products
 
 mvn compile exec:java \
       -Dexec.mainClass=${BEAM_MAIN_CLASS} \
@@ -124,14 +124,14 @@ export GCP_REGION=us-central1
 export GCP_NETWORK=autosuggest-network
 export GCP_SUBNETWORK=autosuggest-subnetwork-us-central1-a
 export BUCKET_NAME=autosuggest-bucket
-export BEAM_PROJECT=autosuggest-beam-us
+export BEAM_PROJECT=autosuggest-beam-streaming-us
 export BEAM_PROJECT_GRP_ID=org.example
 export BEAM_PROJECT_PKG=org.example.autosuggest
 export BEAM_MAIN_CLASS=${BEAM_PROJECT_PKG}.RelevantWordsStreaming
 export REDIS_HOST=35.226.88.160
 export REDIS_PORT=6379
-export TOPIC=products
-export SUBSCRIPTION=dataflow-pipeline-products
+export TOPIC=projects/autosuggest-194816/topics/products
+export SUBSCRIPTION=projects/autosuggest-194816/subscriptions/dataflow-pipeline-products
 
 mvn compile exec:java \
       -Dexec.mainClass=${BEAM_MAIN_CLASS} \
