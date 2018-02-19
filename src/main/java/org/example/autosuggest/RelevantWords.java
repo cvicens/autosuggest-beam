@@ -20,7 +20,6 @@ package org.example.autosuggest;
 import org.example.autosuggest.common.ExampleUtils;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
@@ -128,7 +127,7 @@ public class RelevantWords {
       try (Jedis jedis = RedisPoolSingleton.getInstance(redisHost, redisPort).getJedisPool().getResource()) {
         newInsert = jedis.hset("SKUs", "sku-" + c.element().getSku(), mapper.writeValueAsString(c.element()));
         newInserts.inc(newInsert);
-        LOG.debug("Inserted: " + "sku-" + c.element().getSku());
+        LOG.trace("Inserted: " + "sku-" + c.element().getSku());
         c.output(c.element());
       } catch (Throwable e) {
         LOG.error("Error: " + c.element().getSku(), c.element(), e);
@@ -262,11 +261,11 @@ public class RelevantWords {
     }
   }
 
-  public static class InsertProductsInCache extends PTransform<PCollection<Product>, PCollection<Product>> {
+  public static class InsertProductsInCacheX extends PTransform<PCollection<Product>, PCollection<Product>> {
     private String redisHost = null;
     private Integer redisPort = null;
 
-    public InsertProductsInCache (String redisHost, Integer redisPort) {
+    public InsertProductsInCacheX (String redisHost, Integer redisPort) {
       this.redisHost = redisHost;
       this.redisPort = redisPort;
     }
@@ -281,12 +280,12 @@ public class RelevantWords {
     }
   }
 
-  public static class InsertSearchPrefixesInCache extends PTransform< PCollection<KV<String,String>>, 
+  public static class InsertSearchPrefixesInCacheX extends PTransform< PCollection<KV<String,String>>, 
                                                                       PCollection<KV<String,String>> > {
     private String redisHost = null;
     private Integer redisPort = null;
 
-    public InsertSearchPrefixesInCache (String redisHost, Integer redisPort) {
+    public InsertSearchPrefixesInCacheX (String redisHost, Integer redisPort) {
       this.redisHost = redisHost;
       this.redisPort = redisPort;
     }
@@ -369,10 +368,14 @@ public class RelevantWords {
 
     p.apply("ReadLines", TextIO.read().from(options.getInputFile()))
      .apply(new ExtractProducts())
-     //.apply(new PrepareRedisPool())
-     .apply(new InsertProductsInCache(options.getRedisHost(), options.getRedisPort()))
+     .apply(new PrepareRedisPool())
+     .apply(CacheIO.insertProductsInCache()
+        .setHost(options.getRedisHost())
+        .setPort(options.getRedisPort()).build())
      .apply(new ExtractSearchPrefixes())
-     .apply(new InsertSearchPrefixesInCache(options.getRedisHost(), options.getRedisPort()));
+     .apply(CacheIO.insertSearchPrefixesInCache()
+        .setHost(options.getRedisHost())
+        .setPort(options.getRedisPort()).build());
      //.apply(MapElements.via(new FormatProductsAsTextFn()))
      //.apply("WriteCounts", TextIO.write().to(options.getOutput()));
 
