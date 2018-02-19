@@ -379,7 +379,7 @@ public class RelevantWordsStreaming {
 
     Pipeline p = Pipeline.create(options);
 
-    p.apply(PubsubIO.readStrings().fromTopic(options.getTopic()))
+    p.apply(PubsubIO.readStrings().fromSubscription(options.getSubscription()))
     //p.apply("ReadLines", TextIO.read().from(options.getInputFile()))
      .apply(new ExtractProducts())
      .apply(new PrepareRedisPool())
