@@ -1,5 +1,6 @@
 package org.example.autosuggest;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.metrics.Counter;
@@ -94,8 +95,10 @@ public class CacheIO {
           newInserts.inc(newInsert);
           LOG.trace("Inserted: " + "sku-" + c.element().getSku());
           c.output(c.element());
-        } catch (Throwable e) {
+        } catch (JsonProcessingException e) {
           LOG.error("Error: " + c.element().getSku(), c.element(), e);
+        } finally {
+          if (newInsert <= 0) {LOG.error("Error: " + c.element().getSku());}
         }
       }
     }
@@ -197,8 +200,8 @@ public class CacheIO {
         try (Jedis jedis = jedisPool.getResource()) {
           newInsert = jedis.zadd(c.element().getValue(), 0, "sku-" + c.element().getKey());
           newInserts.inc(newInsert);
-        } catch (Throwable e) {
-          System.err.println("Error inserting prefix cache SKU: " + c.element().getValue() + "<=" + c.element().getKey() + "\n" + e.getMessage());
+        } finally {
+          if (newInsert <= 0) {LOG.error("Error: " + c.element().getValue(), c.element(), e);}
         }
 
         c.output(c.element());
