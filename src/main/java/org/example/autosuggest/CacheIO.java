@@ -201,7 +201,8 @@ public class CacheIO {
           newInsert = jedis.zadd(c.element().getValue(), 0, "sku-" + c.element().getKey());
           newInserts.inc(newInsert);
         } finally {
-          if (newInsert <= 0) {LOG.error("Error: " + c.element().getValue());}
+          //if (newInsert <= 0) {LOG.error("Error: " + c.element().getValue());}
+          ;
         }
 
         c.output(c.element());
