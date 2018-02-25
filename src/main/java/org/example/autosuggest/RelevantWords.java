@@ -379,7 +379,7 @@ public class RelevantWords {
      //.apply(MapElements.via(new FormatProductsAsTextFn()))
      //.apply("WriteCounts", TextIO.write().to(options.getOutput()));
 
-    p.run().waitUntilFinish();
-    //p.run();
+    //p.run().waitUntilFinish();
+    p.run();
   }
 }
